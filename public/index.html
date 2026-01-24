@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h3>Mini WhatsApp (MongoDB)</h3>
+
+<div>
+  <input id="me" placeholder="Your ID (e.g. 101)">
+  <button onclick="register()">Register</button>
+</div>
+
+<hr>
+
+<div>
+  <input id="to" placeholder="Chat with ID">
+  <button onclick="loadHistory()">Load Chat</button>
+</div>
+
+<div>
+  <input id="msg" placeholder="Message">
+  <button onclick="send()">Send</button>
+</div>
+
+<ul id="chat"></ul>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  function register() {
+    const id = document.getElementById("me").value;
+    socket.emit("register", id);
+  }
+
+  function send() {
+    socket.emit("send-message", {
+      to: document.getElementById("to").value,
+      message: document.getElementById("msg").value
+    });
+    document.getElementById("msg").value = "";
+  }
+
+  function loadHistory() {
+    socket.emit("get-history", {
+      withUser: document.getElementById("to").value
+    });
+  }
+
+  socket.on("receive-message", msg => {
+    const li = document.createElement("li");
+    li.innerText = `${msg.from}: ${msg.text}`;
+    document.getElementById("chat").appendChild(li);
+  });
+
+  socket.on("chat-history", history => {
+    const chat = document.getElementById("chat");
+    chat.innerHTML = "";
+    history.forEach(msg => {
+      const li = document.createElement("li");
+      li.innerText = `${msg.from}: ${msg.text}`;
+      chat.appendChild(li);
+    });
+  });
+</script>
+
+</body>
+</html>
