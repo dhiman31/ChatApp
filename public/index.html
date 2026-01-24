@@ -1,120 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Secure Socket Chat</title>
+  <title>Secure Chat</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h2>Signup / Login</h2>
-<input id="username" placeholder="username" />
-<input id="password" type="password" placeholder="password" />
-<button onclick="signup()">Signup</button>
-<button onclick="login()">Login</button>
+<div class="container">
 
-<hr>
+  <!-- AUTH -->
+  <div class="card auth-card">
+    <h2>🔐 Secure Login</h2>
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
 
-<h2>Chat With User</h2>
-<input id="chatUser" placeholder="username to chat with" />
-<button onclick="loadHistory()">Load Chat</button>
+    <div class="btn-row">
+      <button onclick="signup()">Signup</button>
+      <button onclick="login()" class="primary">Login</button>
+    </div>
+  </div>
 
-<hr>
+  <!-- CHAT -->
+  <div class="card chat-card">
+    <div class="chat-header">
+      <input id="chatUser" placeholder="Chat with username">
+      <button onclick="loadHistory()">Load Chat</button>
+    </div>
 
-<h2>Send Message</h2>
-<input id="messageInput" placeholder="Message" />
-<button onclick="sendMessage()">Send</button>
+    <div id="chatBox" class="chat-box"></div>
 
-<h3>Chat</h3>
-<div id="chatBox" style="border:1px solid black; height:200px; overflow:auto;"></div>
+    <div class="chat-input-row">
+      <input id="messageInput" placeholder="Type a message...">
+      <button onclick="sendMessage()" class="send-btn">➤</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="toastContainer"></div>
 
 <script src="http://localhost:3000/socket.io/socket.io.js"></script>
-<script>
-let socket = null;
-let token = null;
-let currentChatUser = null;
-
-const chatBox = document.getElementById("chatBox");
-
-function addMessage(user, msg, time) {
-  chatBox.innerHTML += `<p><b>${user}</b> (${new Date(time).toLocaleTimeString()}): ${msg}</p>`;
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-async function signup() {
-  const res = await fetch("http://localhost:3000/api/v1/user/signup", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  });
-  const data = await res.json();
-  alert(data.message);
-}
-
-async function login() {
-  const res = await fetch("http://localhost:3000/api/v1/user/login", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  });
-
-  const data = await res.json();
-
-  if (!data.success) {
-    alert("Login failed");
-    return;
-  }
-
-  token = data.data;
-  alert("Login successful!");
-
-  connectSocket();
-}
-
-function connectSocket() {
-  socket = io("http://localhost:3000", {
-    auth: { token }
-  });
-
-  socket.on("connect", () => {
-    console.log("Socket connected:", socket.id);
-  });
-
-  socket.on("receive-message", (msg) => {
-    addMessage(msg.from, msg.content, msg.time);
-  });
-
-  socket.on("chat_history", (messages) => {
-    chatBox.innerHTML = "";
-    messages.forEach(m => {
-      addMessage(m.from?.username || "Me", m.content, m.time);
-    });
-  });
-
-  socket.on("connect_error", (err) => {
-    console.error("Socket auth error:", err.message);
-  });
-}
-
-function loadHistory() {
-  if (!socket) return alert("Login first");
-  currentChatUser = chatUser.value;
-  socket.emit("history", currentChatUser);
-}
-
-function sendMessage() {
-  if (!socket) return alert("Login first");
-  socket.emit("send", {
-    to: currentChatUser,
-    content: messageInput.value
-  });
-  addMessage("Me", messageInput.value, new Date());
-  messageInput.value = "";
-}
-</script>
+<script src="script.js"></script>
 </body>
 </html>

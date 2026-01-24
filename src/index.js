@@ -3,7 +3,7 @@ const connect = require('./config/DB-config');
 const http = require('http');
 const ApiRoutes = require('./routes/index');
 const bodyParser = require('body-parser');
-const initiateSocket = require('./services/socket');
+const initiateSocket = require('./sockets/socket');
 const path = require('path');
 const messageRepository = require('./repository/messageRepository');
 
