@@ -1,67 +1,120 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <title>Secure Socket Chat</title>
+</head>
 <body>
 
-<h3>Mini WhatsApp (MongoDB)</h3>
-
-<div>
-  <input id="me" placeholder="Your ID (e.g. 101)">
-  <button onclick="register()">Register</button>
-</div>
+<h2>Signup / Login</h2>
+<input id="username" placeholder="username" />
+<input id="password" type="password" placeholder="password" />
+<button onclick="signup()">Signup</button>
+<button onclick="login()">Login</button>
 
 <hr>
 
-<div>
-  <input id="to" placeholder="Chat with ID">
-  <button onclick="loadHistory()">Load Chat</button>
-</div>
+<h2>Chat With User</h2>
+<input id="chatUser" placeholder="username to chat with" />
+<button onclick="loadHistory()">Load Chat</button>
 
-<div>
-  <input id="msg" placeholder="Message">
-  <button onclick="send()">Send</button>
-</div>
+<hr>
 
-<ul id="chat"></ul>
+<h2>Send Message</h2>
+<input id="messageInput" placeholder="Message" />
+<button onclick="sendMessage()">Send</button>
 
-<script src="/socket.io/socket.io.js"></script>
+<h3>Chat</h3>
+<div id="chatBox" style="border:1px solid black; height:200px; overflow:auto;"></div>
+
+<script src="http://localhost:3000/socket.io/socket.io.js"></script>
 <script>
-  const socket = io();
+let socket = null;
+let token = null;
+let currentChatUser = null;
 
-  function register() {
-    const id = document.getElementById("me").value;
-    socket.emit("register", id);
-  }
+const chatBox = document.getElementById("chatBox");
 
-  function send() {
-    socket.emit("send-message", {
-      to: document.getElementById("to").value,
-      message: document.getElementById("msg").value
-    });
-    document.getElementById("msg").value = "";
-  }
+function addMessage(user, msg, time) {
+  chatBox.innerHTML += `<p><b>${user}</b> (${new Date(time).toLocaleTimeString()}): ${msg}</p>`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-  function loadHistory() {
-    socket.emit("get-history", {
-      withUser: document.getElementById("to").value
-    });
-  }
+async function signup() {
+  const res = await fetch("http://localhost:3000/api/v1/user/signup", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      username: username.value,
+      password: password.value
+    })
+  });
+  const data = await res.json();
+  alert(data.message);
+}
 
-  socket.on("receive-message", msg => {
-    const li = document.createElement("li");
-    li.innerText = `${msg.from}: ${msg.text}`;
-    document.getElementById("chat").appendChild(li);
+async function login() {
+  const res = await fetch("http://localhost:3000/api/v1/user/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      username: username.value,
+      password: password.value
+    })
   });
 
-  socket.on("chat-history", history => {
-    const chat = document.getElementById("chat");
-    chat.innerHTML = "";
-    history.forEach(msg => {
-      const li = document.createElement("li");
-      li.innerText = `${msg.from}: ${msg.text}`;
-      chat.appendChild(li);
+  const data = await res.json();
+
+  if (!data.success) {
+    alert("Login failed");
+    return;
+  }
+
+  token = data.data;
+  alert("Login successful!");
+
+  connectSocket();
+}
+
+function connectSocket() {
+  socket = io("http://localhost:3000", {
+    auth: { token }
+  });
+
+  socket.on("connect", () => {
+    console.log("Socket connected:", socket.id);
+  });
+
+  socket.on("receive-message", (msg) => {
+    addMessage(msg.from, msg.content, msg.time);
+  });
+
+  socket.on("chat_history", (messages) => {
+    chatBox.innerHTML = "";
+    messages.forEach(m => {
+      addMessage(m.from?.username || "Me", m.content, m.time);
     });
   });
+
+  socket.on("connect_error", (err) => {
+    console.error("Socket auth error:", err.message);
+  });
+}
+
+function loadHistory() {
+  if (!socket) return alert("Login first");
+  currentChatUser = chatUser.value;
+  socket.emit("history", currentChatUser);
+}
+
+function sendMessage() {
+  if (!socket) return alert("Login first");
+  socket.emit("send", {
+    to: currentChatUser,
+    content: messageInput.value
+  });
+  addMessage("Me", messageInput.value, new Date());
+  messageInput.value = "";
+}
 </script>
-
 </body>
 </html>

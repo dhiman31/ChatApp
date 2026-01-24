@@ -24,6 +24,7 @@ const signup = async (req,res) => {
 
 const login = async (req,res) => {
     try {
+        console.log("LOGIN BODY:", req.body);
         const { username , password } = {...(req.body)};
         const user = await userServ.login(username,password);
         return res.status(201).json({
