@@ -43,7 +43,40 @@ const login = async (req,res) => {
     }
 }
 
+const authenticate = async (req,res) => {
+    try {
+
+        const authHeader = req.headers.authorization;
+        if (!authHeader)
+        return res.status(401).json({ msg: "No token provided" });
+
+        const parts = authHeader.split(' ');
+
+        if (parts.length !== 2 || parts[0] !== 'Bearer')
+        return res.status(401).json({ msg: "Invalid auth format" });
+
+        const token = parts[1];
+
+        const response = await userServ.authenticate(token);
+        return res.status(201).json({
+            data:response,
+            success : true,
+            message : "User is Authenticated and User is valid",
+            err : {}
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            data:{},
+            success:false,
+            message : "Not authorized!",
+            err : error
+        })
+    }
+}
+
 module.exports = {
     signup,
-    login
+    login,
+    authenticate
 }
